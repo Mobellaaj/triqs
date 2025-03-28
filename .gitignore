@@ -1,2 +1,6 @@
 doc/documentation/python_api
 doc/documentation/cpp_api
+_build/
+deps/mpi
+deps/nda
+error.log

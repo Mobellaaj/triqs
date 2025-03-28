@@ -143,7 +143,7 @@ decltype(auto) operator[](Arg &&...arg) && noexcept(has_no_boundcheck)
 decltype(auto) operator[](typename mesh_t::index_t const &index) noexcept(has_no_boundcheck)
   requires(arity == 1)
 {
-  return this_t::operator[]<typename mesh_t::index_t const &>(index);
+  return this_t::template operator[]<typename mesh_t::index_t const &>(index);
 }
 
 //----------------------------- HDF5 -----------------------------

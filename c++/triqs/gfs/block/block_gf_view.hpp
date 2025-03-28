@@ -21,7 +21,7 @@
 
 namespace triqs::gfs {
 
-  template <typename Mesh, typename Target, typename Layout, int Arity, bool IsConst>
+  template <typename Mesh, typename Target, typename Layout, int Arity, bool IsConst, typename OwningPolicy>
   class block_gf_view : is_view_tag, TRIQS_CONCEPT_TAG_NAME(BlockGreenFunction) {
     using this_t = block_gf_view; // for common code
 
@@ -33,13 +33,13 @@ namespace triqs::gfs {
     using mesh_t   = Mesh;
     using target_t = Target;
 
-    using regular_type      = block_gf<Mesh, Target, typename Layout::contiguous_t, Arity>;
+    using regular_type      = block_gf<Mesh, Target, typename Layout::contiguous_t, Arity>; /// TODO: Parent of OwningPolicy?
     using mutable_view_type = block_gf_view<Mesh, Target, Layout, Arity>;
-    using view_type         = block_gf_view<Mesh, Target, Layout, Arity, false>;
-    using const_view_type   = block_gf_view<Mesh, Target, Layout, Arity, true>;
+    using view_type         = block_gf_view<Mesh, Target, Layout, Arity, false, OwningPolicy>;
+    using const_view_type   = block_gf_view<Mesh, Target, Layout, Arity, true, OwningPolicy>;
 
     /// The associated real type
-    using real_t = block_gf_view<Mesh, typename Target::real_t, Layout, Arity, IsConst>;
+    using real_t = block_gf_view<Mesh, typename Target::real_t, Layout, Arity, IsConst, OwningPolicy>;
 
     using g_t           = std::conditional_t<IsConst, gf_const_view<Mesh, Target, Layout>, gf_view<Mesh, Target, Layout>>;
     using data_t        = std::conditional_t<Arity == 1, std::vector<g_t>, std::vector<std::vector<g_t>>>;

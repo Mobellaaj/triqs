@@ -22,14 +22,14 @@ namespace triqs::gfs {
 
   // ----------------------  gf_view -----------------------------------------
   /**
-   * The Green function container. 
+   * The Green function container.
    *
    * @tparam M       The domain of definition
    * @tparam Target  The target domain
    *
    * @include triqs/gfs.hpp
    */
-  template <Mesh M, typename Target, typename Layout> class gf_view : is_view_tag, TRIQS_CONCEPT_TAG_NAME(GreenFunction) {
+  template <Mesh M, typename Target, typename Layout, typename OwningPolicy> class gf_view : is_view_tag, TRIQS_CONCEPT_TAG_NAME(GreenFunction) {
 
     using this_t = gf_view<M, Target, Layout>; // used in common code
 
@@ -69,6 +69,12 @@ namespace triqs::gfs {
     /// Real or Complex
     using scalar_t = typename Target::scalar_t;
 
+    /// Type of the owning policy (see @ref mem_pols).
+    using owning_policy_t = OwningPolicy;
+
+    /// Type of the memory handle (see @ref mem_handles).
+    using storage_t = typename OwningPolicy::template handle<scalar_t>;
+
     /// Arity of the function (number of variables)
     static constexpr int arity = n_variables<M>;
 
@@ -79,7 +85,7 @@ namespace triqs::gfs {
     static constexpr int data_rank = arity + Target::rank;
 
     /// Type of the data array
-    using data_t = nda::basic_array_view<scalar_t, data_rank, Layout>;
+    using data_t = nda::basic_array_view<scalar_t, data_rank, Layout, 'A', nda::default_accessor, owning_policy_t>;
 
     using target_shape_t = std::array<long, Target::rank>;
 
@@ -181,8 +187,8 @@ namespace triqs::gfs {
 
     /**
        * Builds a view on top of a mesh, a data array
-       * 
-       * @tparam ArrayType Type of the data array 
+       *
+       * @tparam ArrayType Type of the data array
        * @param dat Data array
        */
     gf_view(mesh_t m, data_t dat) : _mesh(std::move(m)), _data(dat) {}

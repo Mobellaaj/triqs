@@ -27,9 +27,9 @@ namespace triqs::gfs {
   using nda::C_layout;
   using nda::C_stride_layout;
 
-  template <Mesh M, typename Target = matrix_valued, typename Layout = C_layout> class gf;
-  template <Mesh M, typename Target = matrix_valued, typename Layout = C_stride_layout> class gf_view;
-  template <Mesh M, typename Target = matrix_valued, typename Layout = C_stride_layout> class gf_const_view;
+  template <Mesh M, typename Target = matrix_valued, typename Layout = C_layout, typename ContainerPolicy = nda::heap<>> class gf;
+  template <Mesh M, typename Target = matrix_valued, typename Layout = C_stride_layout, typename OwningPolicy = nda::borrowed<>> class gf_view;
+  template <Mesh M, typename Target = matrix_valued, typename Layout = C_stride_layout, typename OwningPolicy = nda::borrowed<>> class gf_const_view;
 
   /*----------------------------------------------------------
    *   Traits
@@ -82,14 +82,14 @@ namespace triqs::gfs {
 
   // ----------------------  gf -----------------------------------------
   /**
-   * The Green function container. 
+   * The Green function container.
    *
    * @tparam M        The domain of definition
    * @tparam Target   The target domain
    *
    * @include triqs/gfs.hpp
    */
-  template <Mesh M, typename Target, typename Layout> class gf : TRIQS_CONCEPT_TAG_NAME(GreenFunction) {
+  template <Mesh M, typename Target, typename Layout, typename ContainerPolicy> class gf : TRIQS_CONCEPT_TAG_NAME(GreenFunction) {
 
     static_assert(not std::is_same_v<M, triqs::lattice::brillouin_zone>,
                   "Since TRIQS 2.3, brillouin_zone is replaced by mesh::brzone as a mesh name. Cf Doc, changelog");
@@ -132,6 +132,12 @@ namespace triqs::gfs {
     /// Real or Complex
     using scalar_t = typename Target::scalar_t;
 
+    /// Type of Container Policy
+    using container_policy_t = ContainerPolicy;
+
+     /// Type of the memory handle
+     using storage_t = typename ContainerPolicy::template handle<scalar_t>;
+
     /// Arity of the function (number of variables)
     static constexpr int arity = n_variables<M>;
 
@@ -142,7 +148,7 @@ namespace triqs::gfs {
     static constexpr int data_rank = arity + Target::rank;
 
     /// Type of the data array
-    using data_t = nda::basic_array<scalar_t, data_rank, Layout, 'A', nda::heap<>>;
+    using data_t = nda::basic_array<scalar_t, data_rank, Layout, 'A', container_policy_t>;
 
     using target_shape_t = std::array<long, Target::rank>;
 
@@ -249,7 +255,7 @@ namespace triqs::gfs {
     /**
      *  @param m Mesh
      *  @param shape Target shape
-     * 
+     *
      */
     gf(mesh_t m, target_shape_t shape = {}) : _mesh(std::move(m)), _data(make_data_shape(_mesh, shape)) {}
 
@@ -263,11 +269,11 @@ namespace triqs::gfs {
      */
     explicit gf(gf_const_view<M, Target> const &g) : _mesh(g.mesh()), _data(g.data()) {}
 
-    /** 
+    /**
      *  From any object modeling the :ref:`concept_GreenFunction`.
-     * 
+     *
      *  @tparam G A type modeling :ref:`concept_GreenFunction`.
-     *  @param g 
+     *  @param g
      */
     template <typename G>
     explicit gf(G const &g)
@@ -277,12 +283,12 @@ namespace triqs::gfs {
     } // explicit is very important here.
     // TODO: We would like to refine this, G should have the same mesh, target, at least ...
 
-    /** 
+    /**
      *  from the mpi lazy operation. Cf MPI section !
-     * 
+     *
      *  @tparam Tag
      *  @param l The lazy object
-     *  
+     *
      *  NB : type must be the same, e.g. g2(reduce(g1)) will work only if mesh, Target, Singularity are the same...
      */
     template <typename Tag> gf(mpi::lazy<Tag, gf_const_view<M, Target>> l) : gf() { operator=(l); }

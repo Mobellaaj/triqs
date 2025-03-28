@@ -27,19 +27,19 @@ namespace triqs::gfs {
   /*----------------------------------------------------------
    *   Declaration of main types : gf, gf_view, gf_const_view
    *--------------------------------------------------------*/
-  template <typename Mesh, typename Target = matrix_valued, typename Layout = nda::C_layout, int Arity = 1> class block_gf;
-  template <typename Mesh, typename Target = matrix_valued, typename Layout = nda::C_stride_layout, int Arity = 1, bool IsConst = false>
+  template <typename Mesh, typename Target = matrix_valued, typename Layout = nda::C_layout, int Arity = 1, typename ContainerPolicy = nda::heap<>> class block_gf;
+  template <typename Mesh, typename Target = matrix_valued, typename Layout = nda::C_stride_layout, int Arity = 1, bool IsConst = false, typename OwningPolicy = nda::borrowed<>>
   class block_gf_view;
 
   // aliases
-  template <typename Mesh, typename Target = matrix_valued, typename Layout = nda::C_stride_layout, int Arity = 1>
-  using block_gf_const_view = block_gf_view<Mesh, Target, Layout, Arity, true>;
+  template <typename Mesh, typename Target = matrix_valued, typename Layout = nda::C_stride_layout, int Arity = 1, typename OwningPolicy = nda::borrowed<>>
+  using block_gf_const_view = block_gf_view<Mesh, Target, Layout, Arity, true, OwningPolicy>;
 
-  template <typename Mesh, typename Target = matrix_valued, typename Layout = nda::C_layout> using block2_gf = block_gf<Mesh, Target, Layout, 2>;
-  template <typename Mesh, typename Target = matrix_valued, typename Layout = nda::C_stride_layout>
-  using block2_gf_view = block_gf_view<Mesh, Target, Layout, 2, false>;
-  template <typename Mesh, typename Target = matrix_valued, typename Layout = nda::C_stride_layout>
-  using block2_gf_const_view = block_gf_view<Mesh, Target, Layout, 2, true>;
+  template <typename Mesh, typename Target = matrix_valued, typename Layout = nda::C_layout, typename ContainerPolicy = nda::heap<>> using block2_gf = block_gf<Mesh, Target, Layout, 2, ContainerPolicy>;
+  template <typename Mesh, typename Target = matrix_valued, typename Layout = nda::C_stride_layout, typename OwningPolicy = nda::borrowed<>>
+  using block2_gf_view = block_gf_view<Mesh, Target, Layout, 2, false, OwningPolicy>;
+  template <typename Mesh, typename Target = matrix_valued, typename Layout = nda::C_stride_layout, typename OwningPolicy = nda::borrowed<>>
+  using block2_gf_const_view = block_gf_view<Mesh, Target, Layout, 2, true, OwningPolicy>;
 
   /// --------------------------- CTAD ---------------------------------
 
@@ -106,7 +106,7 @@ namespace triqs::gfs {
 
   /// ---------------------------  implementation  ---------------------------------
 
-  template <typename Mesh, typename Target, typename Layout, int Arity> class block_gf : TRIQS_CONCEPT_TAG_NAME(BlockGreenFunction) {
+  template <typename Mesh, typename Target, typename Layout, int Arity, typename ContainerPolicy> class block_gf : TRIQS_CONCEPT_TAG_NAME(BlockGreenFunction) {
     using this_t = block_gf; // for common code
     public:
     static constexpr bool is_view  = false;
@@ -116,15 +116,15 @@ namespace triqs::gfs {
     using mesh_t   = Mesh;
     using target_t = Target;
 
-    using regular_type      = block_gf<Mesh, Target, Layout, Arity>;
+    using regular_type      = block_gf<Mesh, Target, Layout, Arity, ContainerPolicy>;
     using mutable_view_type = block_gf_view<Mesh, Target, typename Layout::with_lowest_guarantee_t, Arity>;
     using view_type         = block_gf_view<Mesh, Target, typename Layout::with_lowest_guarantee_t, Arity, false>;
     using const_view_type   = block_gf_view<Mesh, Target, typename Layout::with_lowest_guarantee_t, Arity, true>;
 
     /// The associated real type
-    using real_t = block_gf<Mesh, typename Target::real_t, Layout, Arity>;
+    using real_t = block_gf<Mesh, typename Target::real_t, Layout, Arity, ContainerPolicy>;
 
-    using g_t           = gf<Mesh, Target, Layout>;
+    using g_t           = gf<Mesh, Target, Layout, ContainerPolicy>;
     using data_t        = std::conditional_t<Arity == 1, std::vector<g_t>, std::vector<std::vector<g_t>>>;
     using block_names_t = std::conditional_t<Arity == 1, std::vector<std::string>, std::vector<std::vector<std::string>>>;
 
