@@ -94,28 +94,40 @@ namespace triqs::gfs {
     static_assert(not std::is_same_v<M, triqs::lattice::brillouin_zone>,
                   "Since TRIQS 2.3, brillouin_zone is replaced by mesh::brzone as a mesh name. Cf Doc, changelog");
 
-    using this_t = gf<M, Target, Layout>; // used in common code
+    using this_t = gf<M, Target, Layout, ContainerPolicy>; // used in common code
 
     public:
     static constexpr bool is_view  = false;
     static constexpr bool is_const = false;
 
-    using mutable_view_type = gf_view<M, Target, typename Layout::with_lowest_guarantee_t>;
+    /// Real or Complex
+    using scalar_t = typename Target::scalar_t;
+
+    /// Type of Container Policy
+    using container_policy_t = ContainerPolicy;
+
+    /// Type of the memory handle.
+    using storage_t = typename ContainerPolicy::template handle<scalar_t>;
+
+    // Type of the owning policy for views.
+    using OwningPolicy = nda::borrowed<storage_t::address_space>;
+
+    using mutable_view_type = gf_view<M, Target, typename Layout::with_lowest_guarantee_t, OwningPolicy>;
 
     /// Associated const view type
-    using const_view_type = gf_const_view<M, Target, typename Layout::with_lowest_guarantee_t>;
+    using const_view_type = gf_const_view<M, Target, typename Layout::with_lowest_guarantee_t, OwningPolicy>;
 
     /// Associated (non const) view type
-    using view_type = gf_view<M, Target, typename Layout::with_lowest_guarantee_t>;
+    using view_type = gf_view<M, Target, typename Layout::with_lowest_guarantee_t, OwningPolicy>;
 
     /// Associated regular type (gf<....>)
-    using regular_type = gf<M, Target, Layout>;
+    using regular_type = gf<M, Target, Layout, ContainerPolicy>;
 
     /// The associated real type
-    using real_t = gf<M, typename Target::real_t, Layout>;
+    using real_t = gf<M, typename Target::real_t, Layout, ContainerPolicy>;
 
     /// The associated complex type
-    using complex_t = gf<M, typename Target::complex_t, Layout>;
+    using complex_t = gf<M, typename Target::complex_t, Layout, ContainerPolicy>;
 
     /// Template type
     using target_t = Target;
@@ -128,15 +140,6 @@ namespace triqs::gfs {
 
     // NO DOC
     using mesh_index_t = typename mesh_t::index_t;
-
-    /// Real or Complex
-    using scalar_t = typename Target::scalar_t;
-
-    /// Type of Container Policy
-    using container_policy_t = ContainerPolicy;
-
-     /// Type of the memory handle
-     using storage_t = typename ContainerPolicy::template handle<scalar_t>;
 
     /// Arity of the function (number of variables)
     static constexpr int arity = n_variables<M>;

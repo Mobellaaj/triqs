@@ -31,28 +31,34 @@ namespace triqs::gfs {
    */
   template <Mesh M, typename Target, typename Layout, typename OwningPolicy> class gf_view : is_view_tag, TRIQS_CONCEPT_TAG_NAME(GreenFunction) {
 
-    using this_t = gf_view<M, Target, Layout>; // used in common code
+    using this_t = gf_view<M, Target, Layout, OwningPolicy>; // used in common code
 
     public:
     static constexpr bool is_view  = true;
     static constexpr bool is_const = false;
 
-    using mutable_view_type = gf_view<M, Target, Layout>;
+    /// Real or Complex
+    using scalar_t = typename Target::scalar_t;
+
+    /// Type of the memory handle.
+    using storage_t = typename OwningPolicy::template handle<scalar_t>;
+
+    using mutable_view_type = gf_view<M, Target, Layout, OwningPolicy>;
 
     /// Associated const view type
-    using const_view_type = gf_const_view<M, Target, Layout>;
+    using const_view_type = gf_const_view<M, Target, Layout, OwningPolicy>;
 
     /// Associated (non const) view type
-    using view_type = gf_view<M, Target, Layout>;
+    using view_type = gf_view<M, Target, Layout, OwningPolicy>;
 
     /// Associated regular type (gf<....>)
-    using regular_type = gf<M, Target, typename Layout::contiguous_t>;
+    using regular_type = gf<M, Target, typename Layout::contiguous_t, nda::heap<nda::mem::get_addr_space<storage_t>>;
 
     /// The associated real type
-    using real_t = gf_view<M, typename Target::real_t, Layout>;
+    using real_t = gf_view<M, typename Target::real_t, Layout, OwningPolicy>;
 
     /// The associated complex type
-    using complex_t = gf_view<M, typename Target::complex_t, Layout>;
+    using complex_t = gf_view<M, typename Target::complex_t, Layout, OwningPolicy>;
 
     /// Template type
     using target_t = Target;
@@ -66,14 +72,8 @@ namespace triqs::gfs {
     // NO DOC
     using mesh_index_t = typename mesh_t::index_t;
 
-    /// Real or Complex
-    using scalar_t = typename Target::scalar_t;
-
     /// Type of the owning policy (see @ref mem_pols).
     using owning_policy_t = OwningPolicy;
-
-    /// Type of the memory handle (see @ref mem_handles).
-    using storage_t = typename OwningPolicy::template handle<scalar_t>;
 
     /// Arity of the function (number of variables)
     static constexpr int arity = n_variables<M>;

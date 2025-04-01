@@ -36,22 +36,28 @@ namespace triqs::gfs {
     static constexpr bool is_view  = true;
     static constexpr bool is_const = true;
 
-    using mutable_view_type = gf_view<M, Target, Layout>;
+    /// Type of the memory handle (see @ref mem_handles).
+    using storage_t = typename OwningPolicy::template handle<Target::scalar_t>;
+
+    /// Type of the owning policy.
+    using owning_policy_t = OwningPolicy;
+
+    using mutable_view_type = gf_view<M, Target, Layout, OwningPolicy>;
 
     /// Associated const view type
-    using const_view_type = gf_const_view<M, Target, Layout>;
+    using const_view_type = gf_const_view<M, Target, Layout, OwningPolicy>;
 
     /// Associated (non const) view type
-    using view_type = gf_const_view<M, Target, Layout>;
+    using view_type = gf_const_view<M, Target, Layout, OwningPolicy>;
 
     /// Associated regular type (gf<....>)
-    using regular_type = gf<M, Target>; // FIXME : find the Layout
+    using regular_type = gf<M, Target, Layout, nda::heap<nda::mem::get_addr_space<storage_t>>; // FIXME : find the Layout
 
     /// The associated real type
-    using real_t = gf_const_view<M, typename Target::real_t, Layout>;
+    using real_t = gf_const_view<M, typename Target::real_t, Layout, OwningPolicy>;
 
     /// The associated complex type
-    using complex_t = gf_const_view<M, typename Target::complex_t, Layout>;
+    using complex_t = gf_const_view<M, typename Target::complex_t, Layout, OwningPolicy>;
 
     /// Template type
     using target_t = Target;
@@ -67,12 +73,6 @@ namespace triqs::gfs {
 
     /// Real or Complex
     using scalar_t = typename Target::scalar_t;
-
-    /// Type of the owning policy (see @ref mem_pols).
-    using owning_policy_t = OwningPolicy;
-
-    /// Type of the memory handle (see @ref mem_handles).
-    using storage_t = typename OwningPolicy::template handle<scalar_t>;
 
     /// Arity of the function (number of variables)
     static constexpr int arity = n_variables<M>;

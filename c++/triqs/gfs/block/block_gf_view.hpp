@@ -33,15 +33,18 @@ namespace triqs::gfs {
     using mesh_t   = Mesh;
     using target_t = Target;
 
-    using regular_type      = block_gf<Mesh, Target, typename Layout::contiguous_t, Arity>; /// TODO: Parent of OwningPolicy?
-    using mutable_view_type = block_gf_view<Mesh, Target, Layout, Arity>;
+    /// Type of the memory handle (see @ref mem_handles).
+    using storage_t = typename OwningPolicy::template handle<Target::scalar_t>;
+
+    using regular_type      = block_gf<Mesh, Target, typename Layout::contiguous_t, Arity, nda::heap<nda::mem::get_addr_space<storage_t>>;
+    using mutable_view_type = block_gf_view<Mesh, Target, Layout, Arity, false, OwningPolicy>;
     using view_type         = block_gf_view<Mesh, Target, Layout, Arity, false, OwningPolicy>;
     using const_view_type   = block_gf_view<Mesh, Target, Layout, Arity, true, OwningPolicy>;
 
     /// The associated real type
     using real_t = block_gf_view<Mesh, typename Target::real_t, Layout, Arity, IsConst, OwningPolicy>;
 
-    using g_t           = std::conditional_t<IsConst, gf_const_view<Mesh, Target, Layout>, gf_view<Mesh, Target, Layout>>;
+    using g_t           = std::conditional_t<IsConst, gf_const_view<Mesh, Target, Layout, OwningPolicy>, gf_view<Mesh, Target, Layout, OwningPolicy>>;
     using data_t        = std::conditional_t<Arity == 1, std::vector<g_t>, std::vector<std::vector<g_t>>>;
     using block_names_t = std::conditional_t<Arity == 1, std::vector<std::string>, std::vector<std::vector<std::string>>>;
 

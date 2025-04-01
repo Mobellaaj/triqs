@@ -19,6 +19,9 @@
 
 #include <triqs/test_tools/gfs.hpp>
 
+
+/// TODO: make it use mpi_shm_allocator
+
 TEST(Block2, Base) {
 
   double beta = 1;
@@ -53,6 +56,7 @@ TEST(Block2, Base) {
   EXPECT_BLOCK2_GF_NEAR(B1, rw_h5(B1, "block2", "B1"));
 
   // Data write/read access
+  /// TODO: ideally one rank should write
   B1(0, 0)[0] = 1.0;
   EXPECT_ARRAY_NEAR(B1(0, 0)(0), matrix<double>{{1, 0}, {0, 1}});
 
@@ -89,7 +93,7 @@ TEST(Block2, Base) {
   auto B1_interp = reinterpret_scalar_valued_gf_as_matrix_valued(B1_scalar);
 
   // Inversion
-  auto inv_G1 = inverse(G1);
+  auto inv_G1 = inverse(G1);  /// TODO: start with all ranks and then only be done in one rank
   auto B      = make_block2_gf(3, 3, G1);
   auto inv_B  = inverse(B);
   for (auto &g : inv_B) EXPECT_GF_NEAR(g, inv_G1);
@@ -120,6 +124,93 @@ TEST(Block2, Arithmetic) {
   auto B        = make_block2_gf({"a", "b"}, {"c", "d"}, G_vecvec);
 
   EXPECT_BLOCK2_GF_NEAR(block2_gf<imfreq>{2 * B}, block2_gf<imfreq>{1.0 * B + B * 1.0});
+}
+
+using mpi_shm_allocator = nda::mem::mallocator<nda::mem::MPISharedMemory>;
+using mpi_shm = nda::mem::mpi_shm;
+
+TEST(Block2, BaseMPI) {
+  /*
+  auto shm = mpi_shm::get_communicator();
+  int rank = shm.rank();
+  int size = shm.size();
+
+  double beta = 1;
+  /// Instantiate GF objects with mpi_shm_allocator.
+  auto G1     = gf<imfreq, matrix_valued, C_layout, nda::heap_basic<mpi_shm_allocator>>({beta, Fermion}, {2, 2});
+  auto G2     = G1;
+  auto G3     = G1;
+
+
+  nda::clef::placeholder<0> w_;
+  G1(w_) << 1. / (w_ + 2.);
+  G2(w_) << 2. / (w_ - 2.);
+
+  // Constructors
+  auto G_vec    = std::vector{G1, G2, G3};
+  auto G_vecvec = std::vector{G_vec, G_vec};
+
+  auto B1 = block2_gf<imfreq>{G_vecvec};
+  auto B2 = block2_gf<imfreq>{B1()};
+  auto B3 = block2_gf<imfreq>({{"0", "1"}, {"0", "1", "2"}}, G_vecvec);
+  auto B4 = make_block2_gf({"0", "1"}, {"0", "1", "2"}, G_vecvec);
+  auto B5 = make_block2_gf(2, 1, G1);
+
+  auto view_vec    = std::vector<gf_view<imfreq>>{G1, G2, G3};
+  auto view_vecvec = std::vector{view_vec, view_vec};
+  auto V1          = make_block2_gf_view(view_vecvec);
+
+  EXPECT_BLOCK2_GF_NEAR(B1, B2);
+  EXPECT_BLOCK2_GF_NEAR(B1, B3);
+  EXPECT_BLOCK2_GF_NEAR(B1, B4);
+  EXPECT_BLOCK2_GF_NEAR(B1, V1);
+
+  // H5 read write
+  EXPECT_BLOCK2_GF_NEAR(B1, rw_h5(B1, "block2", "B1"));
+
+  // Data write/read access
+  /// TODO: ideally one rank should write
+  B1(0, 0)[0] = 1.0;
+  EXPECT_ARRAY_NEAR(B1(0, 0)(0), matrix<double>{{1, 0}, {0, 1}});
+
+  // Operations
+  B1 = B1 / 2.0;
+  B1 = B1 * 4.0;
+  EXPECT_CLOSE(B1(0, 0)[0](0, 0), 2.0);
+  B1 = B1 + B1 * B1;
+  EXPECT_CLOSE(B1(0, 0)[0](0, 0), 6.0);
+  B1 = B1 + B1() * B1();
+  EXPECT_CLOSE(B1(0, 0)[0](0, 0), 42.0);
+
+  // View Access
+  V1(0, 0)[0] = 5.0;
+  EXPECT_CLOSE(G1[0](0, 0), 5.0);
+
+  // Loops
+  for (auto &g : B1) { g[0] = 20; }
+  EXPECT_CLOSE(B1(0, 0)[0](0, 0), 20);
+  for (auto &g : B1()) { g[0] = 40; }
+  EXPECT_CLOSE(B1(0, 0)[0](0, 0), 40);
+
+  // Clef expressions
+  clef::placeholder<0> b1_;
+  clef::placeholder<1> b2_;
+  clef::placeholder<2> iw_;
+  B1(b1_, b2_)[iw_] << b1_ * b2_ / (iw_ + 2);
+  auto B11 = B1;
+  B1(b1_, b2_)(iw_) << B11(b1_, b2_)(iw_) * B1(b1_, b2_)(iw_) * B11(b1_, b2_)(iw_);
+
+  // Reinterpretation (compile checks)
+  auto G1_scalar = gf<imfreq, scalar_valued>{{beta, Fermion}};
+  auto B1_scalar = make_block2_gf(3, 3, G1_scalar);
+  auto B1_interp = reinterpret_scalar_valued_gf_as_matrix_valued(B1_scalar);
+
+  // Inversion
+  auto inv_G1 = inverse(G1);  /// TODO: start with all ranks and then only be done in one rank
+  auto B      = make_block2_gf(3, 3, G1);
+  auto inv_B  = inverse(B);
+  for (auto &g : inv_B) EXPECT_GF_NEAR(g, inv_G1);
+  */
 }
 
 MAKE_MAIN;

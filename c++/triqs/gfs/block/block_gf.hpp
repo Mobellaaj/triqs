@@ -57,11 +57,11 @@ namespace triqs::gfs {
   //
   template <typename G, int n = 0> inline constexpr bool is_block_gf_v = false;
 
-  template <typename Mesh, typename Target, typename Layout, int Arity>
-  inline constexpr bool is_block_gf_v<block_gf<Mesh, Target, Layout, Arity>, Arity> = true;
+  template <typename Mesh, typename Target, typename Layout, int Arity, typename ContainerPolicy>
+  inline constexpr bool is_block_gf_v<block_gf<Mesh, Target, Layout, Arity, ContainerPolicy>, Arity> = true;
 
-  template <typename Mesh, typename Target, typename Layout, int Arity, bool IsConst>
-  inline constexpr bool is_block_gf_v<block_gf_view<Mesh, Target, Layout, Arity, IsConst>, Arity> = true;
+  template <typename Mesh, typename Target, typename Layout, int Arity, bool IsConst, typename OwningPolicy>
+  inline constexpr bool is_block_gf_v<block_gf_view<Mesh, Target, Layout, Arity, IsConst, OwningPolicy>, Arity> = true;
 
   template <typename, typename = std::void_t<>> inline constexpr int arity_of = -1;
 
@@ -116,10 +116,19 @@ namespace triqs::gfs {
     using mesh_t   = Mesh;
     using target_t = Target;
 
+    /// Type of Container Policy
+    using container_policy_t = ContainerPolicy;
+
+    /// Type of the memory handle (see @ref mem_handles).
+    using storage_t = typename ContainerPolicy::template handle<Target::scalar_t>;
+
+    // Type of the owning policy for views.
+    using OwningPolicy = nda::borrowed<storage_t::address_space>;
+
     using regular_type      = block_gf<Mesh, Target, Layout, Arity, ContainerPolicy>;
-    using mutable_view_type = block_gf_view<Mesh, Target, typename Layout::with_lowest_guarantee_t, Arity>;
-    using view_type         = block_gf_view<Mesh, Target, typename Layout::with_lowest_guarantee_t, Arity, false>;
-    using const_view_type   = block_gf_view<Mesh, Target, typename Layout::with_lowest_guarantee_t, Arity, true>;
+    using mutable_view_type = block_gf_view<Mesh, Target, typename Layout::with_lowest_guarantee_t, Arity, false, OwningPolicy>;
+    using view_type         = block_gf_view<Mesh, Target, typename Layout::with_lowest_guarantee_t, Arity, false, OwningPolicy>;
+    using const_view_type   = block_gf_view<Mesh, Target, typename Layout::with_lowest_guarantee_t, Arity, true, OwningPolicy>;
 
     /// The associated real type
     using real_t = block_gf<Mesh, typename Target::real_t, Layout, Arity, ContainerPolicy>;
