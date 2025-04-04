@@ -37,10 +37,9 @@ namespace triqs::gfs {
     static constexpr bool is_const = true;
 
     /// Type of the memory handle (see @ref mem_handles).
-    using storage_t = typename OwningPolicy::template handle<Target::scalar_t>;
+    using storage_t = typename OwningPolicy::template handle<typename Target::scalar_t>;
 
-    /// Type of the owning policy.
-    using owning_policy_t = OwningPolicy;
+    using container_policy_t = nda::heap<nda::mem::get_addr_space<storage_t>>;
 
     using mutable_view_type = gf_view<M, Target, Layout, OwningPolicy>;
 
@@ -51,7 +50,10 @@ namespace triqs::gfs {
     using view_type = gf_const_view<M, Target, Layout, OwningPolicy>;
 
     /// Associated regular type (gf<....>)
-    using regular_type = gf<M, Target, Layout, nda::heap<nda::mem::get_addr_space<storage_t>>; // FIXME : find the Layout
+    using regular_type = gf<M, Target, typename Layout::contiguous_t, container_policy_t>; // FIXME : find the Layout
+
+    /// Associated regular type (gf<....>)
+    using regular_type_c_layout = gf<M, Target, C_layout, container_policy_t>;
 
     /// The associated real type
     using real_t = gf_const_view<M, typename Target::real_t, Layout, OwningPolicy>;
@@ -84,7 +86,7 @@ namespace triqs::gfs {
     static constexpr int data_rank = arity + Target::rank;
 
     /// Type of the data array
-    using data_t = nda::basic_array_view<const scalar_t, data_rank, Layout, 'A', nda::default_accessor, owning_policy_t>;
+    using data_t = nda::basic_array_view<const scalar_t, data_rank, Layout, 'A', nda::default_accessor, OwningPolicy>;
 
     using target_shape_t = std::array<long, Target::rank>;
 
@@ -175,16 +177,16 @@ namespace triqs::gfs {
     gf_const_view() = default;
 
     ///
-    gf_const_view(gf_view<M, Target> const &g) : _mesh(g.mesh()), _data(g.data()) {}
+    gf_const_view(gf_view<M, Target, nda::C_stride_layout, OwningPolicy> const &g) : _mesh(g.mesh()), _data(g.data()) {}
 
     ///
-    gf_const_view(gf<M, Target> const &g) : _mesh(g.mesh()), _data(g.data()) {}
+    gf_const_view(regular_type_c_layout const &g) : _mesh(g.mesh()), _data(g.data()) {}
 
     ///
-    gf_const_view(gf<M, Target> &g) : _mesh(g.mesh()), _data(g.data()) {} // from a gf &
+    gf_const_view(regular_type_c_layout &g) : _mesh(g.mesh()), _data(g.data()) {} // from a gf &
 
     ///
-    gf_const_view(gf<M, Target> &&g) noexcept : _mesh(std::move(g.mesh())), _data(std::move(g.data())) {} // from a gf &&
+    gf_const_view(regular_type_c_layout &&g) noexcept : _mesh(std::move(g.mesh())), _data(std::move(g.data())) {} // from a gf &&
 
     /**
        * Builds a const view on top of a mesh, a data array
@@ -205,7 +207,7 @@ namespace triqs::gfs {
        *
        * @param g The const view to rebind into
        */
-    void rebind(gf_const_view<M, Target> const &g) noexcept {
+    void rebind(gf_const_view<M, Target, nda::C_stride_layout, OwningPolicy> const &g) noexcept {
       this->_mesh = g._mesh;
       this->_data.rebind(g._data);
     }
@@ -215,7 +217,7 @@ namespace triqs::gfs {
        *
        * @param g The const view to rebind into
        */
-    void rebind(gf_view<M, Target> const &X) noexcept { rebind(gf_const_view{X}); }
+    void rebind(gf_view<M, Target, nda::C_stride_layout, OwningPolicy> const &X) noexcept { rebind(gf_const_view{X}); }
 
     // ---------------  No = since it is const ... --------------------
 
@@ -228,14 +230,14 @@ namespace triqs::gfs {
     template <typename Fdata> auto apply_on_data(Fdata &&fd) {
       auto d2    = fd(_data);
       using t2   = target_from_array<decltype(d2), arity>;
-      using gv_t = gf_const_view<M, t2>;
+      using gv_t = gf_const_view<M, t2, nda::C_stride_layout, OwningPolicy>;
       return gv_t{mesh(), d2};
     }
 
     template <typename Fdata> auto apply_on_data(Fdata &&fd) const {
       auto d2    = fd(_data);
       using t2   = target_from_array<decltype(d2), arity>;
-      using gv_t = gf_const_view<M, t2>;
+      using gv_t = gf_const_view<M, t2, nda::C_stride_layout, OwningPolicy>;
       return gv_t{mesh(), d2};
     }
 

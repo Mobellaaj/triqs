@@ -43,6 +43,8 @@ namespace triqs::gfs {
     /// Type of the memory handle.
     using storage_t = typename OwningPolicy::template handle<scalar_t>;
 
+    using container_policy_t = nda::heap<nda::mem::get_addr_space<storage_t>>;
+
     using mutable_view_type = gf_view<M, Target, Layout, OwningPolicy>;
 
     /// Associated const view type
@@ -52,7 +54,7 @@ namespace triqs::gfs {
     using view_type = gf_view<M, Target, Layout, OwningPolicy>;
 
     /// Associated regular type (gf<....>)
-    using regular_type = gf<M, Target, typename Layout::contiguous_t, nda::heap<nda::mem::get_addr_space<storage_t>>;
+    using regular_type = gf<M, Target, typename Layout::contiguous_t, container_policy_t>;
 
     /// The associated real type
     using real_t = gf_view<M, typename Target::real_t, Layout, OwningPolicy>;
@@ -174,16 +176,16 @@ namespace triqs::gfs {
     gf_view() = default;
 
     // NO DOC
-    gf_view(gf_const_view<M, Target> const &g) = delete;
+    gf_view(gf_const_view<M, Target, nda::C_stride_layout, OwningPolicy> const &g) = delete;
 
-    // NO DOC
-    template <typename L> gf_view(gf<M, Target, L> const &g) = delete;
+     // NO DOC
+     template <typename L> gf_view(gf<M, Target, L, container_policy_t> const &g) = delete;
 
-    ///
-    template <typename L> gf_view(gf<M, Target, L> &g) : _mesh(g.mesh()), _data(g.data()) {}
+     ///
+     template <typename L> gf_view(gf<M, Target, L, container_policy_t> &g) : _mesh(g.mesh()), _data(g.data()) {}
 
-    ///
-    template <typename L> gf_view(gf<M, Target, L> &&g) noexcept : _mesh(std::move(g.mesh())), _data(g.data()) {}
+     ///
+     template <typename L> gf_view(gf<M, Target, L, container_policy_t> &&g) noexcept : _mesh(std::move(g.mesh())), _data(g.data()) {}
 
     /**
        * Builds a view on top of a mesh, a data array
@@ -203,7 +205,7 @@ namespace triqs::gfs {
        *
        * @param g The const view to rebind into
        */
-    void rebind(gf_view<M, Target> const &g) noexcept {
+    void rebind(gf_view<M, Target, nda::C_stride_layout, OwningPolicy> const &g) noexcept {
       this->_mesh = g._mesh;
       this->_data.rebind(g._data);
     }
@@ -235,14 +237,14 @@ namespace triqs::gfs {
     template <typename Fdata> auto apply_on_data(Fdata &&fd) {
       auto d2    = fd(_data);
       using t2   = target_from_array<decltype(d2), arity>;
-      using gv_t = gf_view<M, t2>;
+      using gv_t = gf_view<M, t2, nda::C_stride_layout, OwningPolicy>;
       return gv_t{mesh(), d2};
     }
 
     template <typename Fdata> auto apply_on_data(Fdata &&fd) const {
       auto d2    = fd(_data);
       using t2   = target_from_array<decltype(d2), arity>;
-      using gv_t = gf_const_view<M, t2>;
+      using gv_t = gf_const_view<M, t2, nda::C_stride_layout, OwningPolicy>;
       return gv_t{mesh(), d2};
     }
 
@@ -252,7 +254,7 @@ namespace triqs::gfs {
     * Performs MPI reduce
     * @param l The lazy object returned by mpi::reduce
     */
-    void operator=(mpi::lazy<mpi::tag::reduce, gf_const_view<M, Target>> l) {
+    void operator=(mpi::lazy<mpi::tag::reduce, gf_const_view<M, Target, nda::C_stride_layout, OwningPolicy>> l) {
       _mesh = l.rhs.mesh();
       _data = mpi::reduce(l.rhs.data(), l.c, l.root, l.all, l.op); // nda:: necessary on gcc 5. why ??
     }
@@ -261,7 +263,7 @@ namespace triqs::gfs {
      * Performs MPI scatter
      * @param l The lazy object returned by reduce
      */
-    void operator=(mpi::lazy<mpi::tag::scatter, gf_const_view<M, Target>> l) {
+    void operator=(mpi::lazy<mpi::tag::scatter, gf_const_view<M, Target, nda::C_stride_layout, OwningPolicy>> l) {
       _mesh = mpi::scatter(l.rhs.mesh(), l.c, l.root);
       _data = mpi::scatter(l.rhs.data(), l.c, l.root, true);
     }
@@ -270,7 +272,7 @@ namespace triqs::gfs {
      * Performs MPI gather
      * @param l The lazy object returned by mpi::reduce
      */
-    void operator=(mpi::lazy<mpi::tag::gather, gf_const_view<M, Target>> l) {
+    void operator=(mpi::lazy<mpi::tag::gather, gf_const_view<M, Target, nda::C_stride_layout, OwningPolicy>> l) {
       _mesh = mpi::gather(l.rhs.mesh(), l.c, l.root);
       _data = mpi::gather(l.rhs.data(), l.c, l.root, l.all);
     }
@@ -283,7 +285,7 @@ namespace triqs::gfs {
  *                                     View  assignment
  *-----------------------------------------------------------------------------------------------------*/
 
-  template <typename M, typename T, typename L, typename RHS> void triqs_gf_view_assign_delegation(gf_view<M, T, L> g, RHS const &rhs) {
+  template <typename M, typename T, typename L, typename O, typename RHS> void triqs_gf_view_assign_delegation(gf_view<M, T, L, O> g, RHS const &rhs) {
     if constexpr (nda::is_scalar_v<RHS>) {
       for (auto w : g.mesh()) g[w] = rhs;
     } else {
@@ -296,5 +298,5 @@ namespace triqs::gfs {
  *             Delete std::swap for views, as for arrays
  *-----------------------------------------------------------------------------------------------------*/
 namespace std {
-  template <typename M, typename Target> void swap(triqs::gfs::gf_view<M, Target> &a, triqs::gfs::gf_view<M, Target> &b) = delete;
+  template <typename M, typename Target, typename OwningPolicy> void swap(triqs::gfs::gf_view<M, Target, nda::C_stride_layout, OwningPolicy> &a, triqs::gfs::gf_view<M, Target, nda::C_stride_layout, OwningPolicy> &b) = delete;
 }

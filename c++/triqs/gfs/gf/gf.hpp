@@ -265,12 +265,12 @@ namespace triqs::gfs {
     /**
      *  Makes a deep copy of the data
      */
-    explicit gf(gf_view<M, Target> const &g) : _mesh(g.mesh()), _data(g.data()) {}
+    explicit gf(gf_view<M, Target, C_stride_layout, OwningPolicy> const &g) : _mesh(g.mesh()), _data(g.data()) {}
 
     /**
      *  Makes a deep copy of the data
      */
-    explicit gf(gf_const_view<M, Target> const &g) : _mesh(g.mesh()), _data(g.data()) {}
+    explicit gf(gf_const_view<M, Target, C_stride_layout, OwningPolicy> const &g) : _mesh(g.mesh()), _data(g.data()) {}
 
     /**
      *  From any object modeling the :ref:`concept_GreenFunction`.
@@ -294,7 +294,7 @@ namespace triqs::gfs {
      *
      *  NB : type must be the same, e.g. g2(reduce(g1)) will work only if mesh, Target, Singularity are the same...
      */
-    template <typename Tag> gf(mpi::lazy<Tag, gf_const_view<M, Target>> l) : gf() { operator=(l); }
+    template <typename Tag> gf(mpi::lazy<Tag, gf_const_view<M, Target, C_stride_layout, OwningPolicy>> l) : gf() { operator=(l); }
 
     /// ---------------  Operator = --------------------
 
@@ -336,14 +336,14 @@ namespace triqs::gfs {
     template <typename Fdata> auto apply_on_data(Fdata &&fd) {
       auto d2    = fd(_data);
       using t2   = target_from_array<decltype(d2), arity>;
-      using gv_t = gf_view<M, t2>;
+      using gv_t = gf_view<M, t2, C_stride_layout, OwningPolicy>;
       return gv_t{mesh(), d2};
     }
 
     template <typename Fdata> auto apply_on_data(Fdata &&fd) const {
       auto d2    = fd(_data);
       using t2   = target_from_array<decltype(d2), arity>;
-      using gv_t = gf_const_view<M, t2>;
+      using gv_t = gf_const_view<M, t2, C_stride_layout, OwningPolicy>;
       return gv_t{mesh(), d2};
     }
 
@@ -353,7 +353,7 @@ namespace triqs::gfs {
      * Performs MPI reduce
      * @param l The lazy object returned by mpi::reduce
      */
-    gf &operator=(mpi::lazy<mpi::tag::reduce, gf_const_view<M, Target>> l) {
+    gf &operator=(mpi::lazy<mpi::tag::reduce, gf_const_view<M, Target, C_stride_layout, OwningPolicy>> l) {
       _mesh = l.rhs.mesh();
       _data = mpi::reduce(l.rhs.data(), l.c, l.root, l.all, l.op);
       return *this;
@@ -363,7 +363,7 @@ namespace triqs::gfs {
      * Performs MPI scatter
      * @param l The lazy object returned by mpi::scatter
      */
-    gf &operator=(mpi::lazy<mpi::tag::scatter, gf_const_view<M, Target>> l) {
+    gf &operator=(mpi::lazy<mpi::tag::scatter, gf_const_view<M, Target, C_stride_layout, OwningPolicy>> l) {
       _mesh = mpi::scatter(l.rhs.mesh(), l.c, l.root);
       _data = mpi::scatter(l.rhs.data(), l.c, l.root, true);
       return *this;
@@ -373,7 +373,7 @@ namespace triqs::gfs {
      * Performs MPI gather
      * @param l The lazy object returned by mpi::gather
      */
-    gf &operator=(mpi::lazy<mpi::tag::gather, gf_const_view<M, Target>> l) {
+    gf &operator=(mpi::lazy<mpi::tag::gather, gf_const_view<M, Target, C_stride_layout, OwningPolicy>> l) {
       _mesh = mpi::gather(l.rhs.mesh(), l.c, l.root);
       _data = mpi::gather(l.rhs.data(), l.c, l.root, l.all);
       return *this;

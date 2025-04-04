@@ -43,10 +43,10 @@ namespace triqs::gfs {
 
   /// --------------------------- CTAD ---------------------------------
 
-  template <typename Mesh, typename Target, typename Layout> block_gf(std::vector<gf<Mesh, Target, Layout>>) -> block_gf<Mesh, Target, Layout, 1>;
+  template <typename Mesh, typename Target, typename Layout, typename ContainerPolicy> block_gf(std::vector<gf<Mesh, Target, Layout, ContainerPolicy>>) -> block_gf<Mesh, Target, Layout, 1>;
   template <typename Mesh> block_gf(Mesh const &, gf_struct_t const &) -> block_gf<Mesh, matrix_valued>;
-  template <typename Mesh, typename Target, typename Layout, int Arity, bool IsConst>
-  block_gf(block_gf_view<Mesh, Target, Layout, Arity, IsConst>) -> block_gf<Mesh, Target, typename Layout::contiguous_t, Arity>;
+  template <typename Mesh, typename Target, typename Layout, int Arity, bool IsConst, typename OwningPolicy>
+  block_gf(block_gf_view<Mesh, Target, Layout, Arity, IsConst, OwningPolicy>) -> block_gf<Mesh, Target, typename Layout::contiguous_t, Arity>;
 
   /// ---------------------------  traits ---------------------------------
 
@@ -120,15 +120,17 @@ namespace triqs::gfs {
     using container_policy_t = ContainerPolicy;
 
     /// Type of the memory handle (see @ref mem_handles).
-    using storage_t = typename ContainerPolicy::template handle<Target::scalar_t>;
+    using storage_t = typename ContainerPolicy::template handle<typename Target::scalar_t>;
 
     // Type of the owning policy for views.
     using OwningPolicy = nda::borrowed<storage_t::address_space>;
 
+    using view_layout = std::conditional_t<storage_t::address_space == nda::mem::MPISharedMemory, Layout, typename Layout::with_lowest_guarantee_t>;
+
     using regular_type      = block_gf<Mesh, Target, Layout, Arity, ContainerPolicy>;
-    using mutable_view_type = block_gf_view<Mesh, Target, typename Layout::with_lowest_guarantee_t, Arity, false, OwningPolicy>;
-    using view_type         = block_gf_view<Mesh, Target, typename Layout::with_lowest_guarantee_t, Arity, false, OwningPolicy>;
-    using const_view_type   = block_gf_view<Mesh, Target, typename Layout::with_lowest_guarantee_t, Arity, true, OwningPolicy>;
+    using mutable_view_type = block_gf_view<Mesh, Target, view_layout, Arity, false, OwningPolicy>;
+    using view_type         = block_gf_view<Mesh, Target, view_layout, Arity, false, OwningPolicy>;
+    using const_view_type   = block_gf_view<Mesh, Target, view_layout, Arity, true, OwningPolicy>;
 
     /// The associated real type
     using real_t = block_gf<Mesh, typename Target::real_t, Layout, Arity, ContainerPolicy>;
@@ -172,8 +174,8 @@ namespace triqs::gfs {
     /// Construct an empty Green function (with empty array).
     block_gf() = default;
 
-    /// From a block_gf_view of the same kind
-    template <typename L, bool Cnst> block_gf(block_gf_view<Mesh, Target, L, Arity, Cnst> const &g) : block_gf(impl_tag{}, g) {}
+    /// From a block_gf_view of the same kind.
+    template <typename L, bool Cnst> block_gf(block_gf_view<Mesh, Target, L, Arity, Cnst, OwningPolicy> const &g) : block_gf(impl_tag{}, g) {}
 
     /// Construct from anything which models BlockGreenFunction.
     // TODO: We would like to refine this, G should have the same mesh, target, at least ...
@@ -187,7 +189,7 @@ namespace triqs::gfs {
 
     /// Construct from the mpi lazy class of the implementation class, cf mpi section
     // NB : type must be the same, e.g. g2(reduce(g1)) will work only if mesh, Target, Singularity are the same...
-    template <typename Tag> block_gf(mpi::lazy<Tag, block_gf_const_view<Mesh, Target>> x) : block_gf() { operator=(x); }
+    template <typename Tag> block_gf(mpi::lazy<Tag, block_gf_const_view<Mesh, Target, Layout, is_const, OwningPolicy>> x) : block_gf() { operator=(x); }
 
     /// Construct from a vector of gf
     block_gf(data_t V)

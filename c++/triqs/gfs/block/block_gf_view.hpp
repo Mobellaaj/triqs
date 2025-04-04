@@ -34,9 +34,11 @@ namespace triqs::gfs {
     using target_t = Target;
 
     /// Type of the memory handle (see @ref mem_handles).
-    using storage_t = typename OwningPolicy::template handle<Target::scalar_t>;
+    using storage_t = typename OwningPolicy::template handle<typename Target::scalar_t>;
 
-    using regular_type      = block_gf<Mesh, Target, typename Layout::contiguous_t, Arity, nda::heap<nda::mem::get_addr_space<storage_t>>;
+    using container_policy_t = typename  nda::heap<nda::mem::get_addr_space<storage_t>>;
+
+    using regular_type      = block_gf<Mesh, Target, typename Layout::contiguous_t, Arity, container_policy_t>;
     using mutable_view_type = block_gf_view<Mesh, Target, Layout, Arity, false, OwningPolicy>;
     using view_type         = block_gf_view<Mesh, Target, Layout, Arity, false, OwningPolicy>;
     using const_view_type   = block_gf_view<Mesh, Target, Layout, Arity, true, OwningPolicy>;
@@ -85,19 +87,20 @@ namespace triqs::gfs {
     block_gf_view() = default;
 
     template <typename L>
-    block_gf_view(block_gf<Mesh, Target, L, Arity> const &g)
+    block_gf_view(block_gf<Mesh, Target, L, Arity, container_policy_t> const &g)
       requires(IsConst)
        : block_gf_view(impl_tag{}, g) {}
 
     template <typename L>
-    block_gf_view(block_gf<Mesh, Target, L, Arity> &g)
+    block_gf_view(block_gf<Mesh, Target, L, Arity, container_policy_t> &g)
       requires(!IsConst)
        : block_gf_view(impl_tag{}, g) {}
 
-    template <typename L> block_gf_view(block_gf<Mesh, Target, L, Arity> &&g) noexcept : block_gf_view(impl_tag{}, std::move(g)) {}
+    template <typename L>
+    block_gf_view(block_gf<Mesh, Target, L, Arity, container_policy_t> &&g) noexcept : block_gf_view(impl_tag{}, std::move(g)) {}
 
     template <typename L>
-    block_gf_view(block_gf_view<Mesh, Target, L, Arity, !IsConst> const &g)
+    block_gf_view(block_gf_view<Mesh, Target, L, Arity, !IsConst, OwningPolicy> const &g)
       requires(IsConst)
        : block_gf_view(impl_tag{}, g) {}
 
@@ -180,17 +183,17 @@ namespace triqs::gfs {
       _glist       = data_t{x._glist}; // copy of vector<vector<gf_view>>, makes new views on the gf of x
       name         = x.name;
     }
-    void rebind(block_gf_view<Mesh, Target, Layout, Arity, !IsConst> const &X) noexcept
+    void rebind(block_gf_view<Mesh, Target, Layout, Arity, !IsConst, OwningPolicy> const &X) noexcept
       requires(IsConst)
     {
       rebind(block_gf_view{X});
     }
-    void rebind(block_gf<Mesh, Target, Layout, Arity> const &X) noexcept
+    void rebind(regular_type const &X) noexcept
       requires(IsConst)
     {
       rebind(block_gf_view{X});
     }
-    void rebind(block_gf<Mesh, Target, Layout, Arity> &X) noexcept { rebind(block_gf_view{X}); }
+    void rebind(regular_type &X) noexcept { rebind(block_gf_view{X}); }
 
     public:
     //----------------------------- print  -----------------------------
@@ -206,7 +209,7 @@ namespace triqs::gfs {
  *             Delete std::swap for views
  *-----------------------------------------------------------------------------------------------------*/
 namespace std {
-  template <typename Mesh, typename Target, typename Layout, int Arity, bool IsConst>
-  void swap(triqs::gfs::block_gf_view<Mesh, Target, Layout, Arity, IsConst> &a,
-            triqs::gfs::block_gf_view<Mesh, Target, Layout, Arity, IsConst> &b) = delete;
+  template <typename Mesh, typename Target, typename Layout, int Arity, bool IsConst, typename OwningPolicy>
+  void swap(triqs::gfs::block_gf_view<Mesh, Target, Layout, Arity, IsConst, OwningPolicy> &a,
+            triqs::gfs::block_gf_view<Mesh, Target, Layout, Arity, IsConst, OwningPolicy> &b) = delete;
 } // namespace std

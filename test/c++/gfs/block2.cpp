@@ -19,9 +19,6 @@
 
 #include <triqs/test_tools/gfs.hpp>
 
-
-/// TODO: make it use mpi_shm_allocator
-
 TEST(Block2, Base) {
 
   double beta = 1;
@@ -127,23 +124,25 @@ TEST(Block2, Arithmetic) {
 }
 
 using mpi_shm_allocator = nda::mem::mallocator<nda::mem::MPISharedMemory>;
+using container_policy_t_1 = nda::heap<nda::mem::MPISharedMemory>;
+using container_policy_t_2 = nda::heap<nda::mem::Host>;
 using mpi_shm = nda::mem::mpi_shm;
 
 TEST(Block2, BaseMPI) {
-  /*
-  auto shm = mpi_shm::get_communicator();
-  int rank = shm.rank();
-  int size = shm.size();
+  //auto shm = mpi_shm::get_communicator();
+  //int rank = shm.rank();
+  //int size = shm.size();
 
   double beta = 1;
   /// Instantiate GF objects with mpi_shm_allocator.
-  auto G1     = gf<imfreq, matrix_valued, C_layout, nda::heap_basic<mpi_shm_allocator>>({beta, Fermion}, {2, 2});
-  auto G2     = G1;
-  auto G3     = G1;
+  auto G1     = gf<imfreq, matrix_valued, C_layout, container_policy_t_1>({beta, Fermion}, {2, 2});
+  //auto G2     = G1;
+  //auto G3     = G1;
 
 
   nda::clef::placeholder<0> w_;
   G1(w_) << 1. / (w_ + 2.);
+  /*
   G2(w_) << 2. / (w_ - 2.);
 
   // Constructors
